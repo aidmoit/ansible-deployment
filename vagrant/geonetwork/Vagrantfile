@@ -1,0 +1,28 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+### Configuration parameters ###
+ENTREPRISE_NETWORK_DNS_RULE = true
+DNS_server_1 = "172.16.1.1"
+DNS_server_2 = "172.16.1.2"
+### end of Configuration parameters ###
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/debian9"
+
+  config.vm.define "aidmoit-geonetwork"
+  config.vm.hostname = "aidmoit-geonetwork"
+  if ENTREPRISE_NETWORK_DNS_RULE == true
+    config.vm.provision "shell", inline: <<-SHELL
+      systemctl stop resolvconf
+      echo "nameserver 172.16.1.1" > /etc/resolv.conf
+      echo "nameserver 172.16.1.2" >> /etc/resolv.conf
+    SHELL
+  end
+
+  config.vm.network :private_network, ip: "10.0.0.9"
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "../../playbook/install-geonetwork-by-git.yml"
+  end
+
+end

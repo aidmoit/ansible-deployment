@@ -1,0 +1,7 @@
+---
+- name: deploy HDFS on single node
+  hosts: 'mononode-hdfs'
+  
+  roles:
+    - common
+    - hadoop-mononode

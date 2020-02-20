@@ -1,0 +1,17 @@
+Vagrant.configure("2") do |config|
+	config.vm.box = "generic/debian10"
+	config.vm.define "mononode-hdfs"
+	config.vm.hostname = "mononode-hdfs"
+	config.vm.network "public_network", bridge:"enp1s0", use_dhcp_assigned_default_route: true
+	config.vm.provision "shell", inline: <<-SHELL
+		systemctl stop resolvconf
+		echo "nameserver 10.34.192.61" > /etc/resolv.conf
+		echo "nameserver 10.34.192.62" >> /etc/resolv.conf
+	SHELL
+
+	config.vm.provision "ansible" do |ansible|
+		ansible.playbook = "../../playbook/install-mononode.yml"
+	end
+	# config.vm.provision "shell", inline: "sudo apt-get install sshpass && ip addr"
+
+end

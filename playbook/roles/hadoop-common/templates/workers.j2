@@ -1,0 +1,5 @@
+{% for node in cluster %}
+{% if not 'namenode' in node.role %}
+{{node.hostname}}
+{% endif %}
+{% endfor %}

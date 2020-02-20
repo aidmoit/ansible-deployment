@@ -1,0 +1,89 @@
+# See  https://docs.ansible.com/ansible/latest/user_guide/become.html#becoming-an-unprivileged-user for user awx try to su postgres.
+# Pb with permission on ansible tempory files on managested host. Edit ansible.cfg on awx-task for  allow_world_readable_tmpfiles
+# https://docs.ansible.com/ansible/2.4/intro_configuration.html#allow-world-readable-tmpfiles
+    - name: Create geonetwork user in DB
+      become: yes
+      postgresql_user:
+        name: geonetwork
+        password: geonetwork
+        encrypted: yes
+      become: yes
+      become_user: postgres
+
+    - name: Create geonetwork DB and forcing UTF8
+      become: yes
+      postgresql_db:
+        name: geonetwork
+        encoding: UTF-8
+        lc_collate: en_US.UTF-8
+        lc_ctype: en_US.UTF-8
+        template: template0
+      become: yes
+      become_user: postgres
+
+    - name: "Prepare Download geonetwork {{ geonetworkVersion }}"
+      become: yes
+      file:
+        state: directory
+        path: /root/ansible-dl
+
+    - name: "Download geonetwork {{ geonetworkVersion }} - help at https://github.com/geonetwork/core-geonetwork/tree/master/software_development#how-to-build-"
+      become: yes
+      git:
+        repo: https://github.com/geonetwork/core-geonetwork.git
+        dest: "/root/ansible-dl/geonetwork-{{ geonetworkVersion }}"
+        recursive: yes
+        version: "{{ geonetworkGitVersion }}"
+        force: yes #force even if git local has changed (as we modify pom.xml for mvn compilation)
+
+    - name: setting to postgreSQL in WEB-INF/config-db/jdbc.properties
+      become: yes
+      lineinfile:
+        path: "/root/ansible-dl/geonetwork-{{geonetworkVersion}}/pom.xml"
+        regexp: '{{item.From}}'
+        line: '{{item.To}}'
+        state: present
+      with_items:
+         - { From: '<db.type>h2</db.type>', To: '    <db.type>postgres</db.type>'}
+         - { From: '<db.name>gn</db.name>', To: '    <db.name>geonetwork</db.name>'}
+         - { From: '<db.username>www-data</db.username>', To: '    <db.username>geonetwork</db.username>'}
+         - { From: '<db.password>www-data</db.password>', To: '    <db.password>geonetwork</db.password>'}
+
+    - name: maven check source ~ 30min (Speed up with option  2 threads/CPU)
+      become: yes
+      shell: "mvn -f /root/ansible-dl/geonetwork-{{ geonetworkVersion }} clean install -DskipTests -T 2C"
+
+    # - name: maven generate war ~ 5min
+    #   become: yes
+    #   shell: "mvn -f /root/ansible-dl/geonetwork-{{ geonetworkVersion }} package assembly:assembly -DskipTests"
+
+    - name: cp war into webapps
+      become: yes
+      command: "cp /root/ansible-dl/geonetwork-{{ geonetworkVersion }}/web/target/geonetwork.war /usr/share/tomcat/webapps"
+
+    - name: change user permission on geonetwork.war
+      become: yes
+      file:
+        path: /usr/share/tomcat/webapps/geonetwork.war
+        owner: tomcat
+        group: tomcat
+
+    - name: create a geonetwork log file
+      become: yes
+      file:
+        path: /usr/share/tomcat/logs/geonetwork.log
+        owner: tomcat
+        group: tomcat
+        state: touch
+
+    - name: tomcat - stop tomcat
+      become: yes
+      service:
+        name: tomcat
+        state: stopped
+
+    - name: tomcat - start tomcat
+      become: yes
+      service:
+        name: tomcat
+        state: started

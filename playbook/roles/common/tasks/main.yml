@@ -1,0 +1,26 @@
+- name: Full upgrade for the system
+  become: yes
+  apt:
+    update_cache: yes
+    upgrade: yes
+    autoclean: yes
+    autoremove: yes
+
+- name: Install dependencies
+  become: yes
+  apt:
+    name:
+      - maven
+      - python-dev
+      - python-pip
+      - unzip
+      - tree
+      - htop
+      - vim
+      
+- name: Prepare Download directory
+  become: yes
+  file:
+    state: directory
+    path: /root/ansible-dl
+

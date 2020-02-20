@@ -1,0 +1,8 @@
+<property>
+	<name>mapred.job.tracker</name>
+	{% for node in cluster %}
+	{% if 'namenode' in node.role %}
+	<value>hdfs://{{node.IP}}:9001</value>
+	{% endif %}
+	{% endfor %}
+</property>

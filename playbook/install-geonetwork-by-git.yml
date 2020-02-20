@@ -1,0 +1,12 @@
+---
+- name: deploy geonetwork
+  hosts: 'all'
+
+  roles: 
+    - common
+    - postgresql
+    - tomcat
+    - geonetwork
+
+
+

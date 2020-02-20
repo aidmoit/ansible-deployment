@@ -1,0 +1,10 @@
+<configuration>
+	<property>
+		<name>fs.default.name</name>
+		{% for node in cluster %}
+		{% if 'namenode' in node.role %}
+		<value>hdfs://{{node.IP}}:9000</value>
+		{% endif %}
+		{% endfor %}
+	</property>
+</configuration>

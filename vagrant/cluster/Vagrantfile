@@ -1,0 +1,50 @@
+### Configuration parameters ###
+NUMBER_OF_DATANODE = 2
+DEPLOY_Geonetwork = false
+ENTREPRISE_NETWORK_DNS_RULE = true
+DNS_server_1 = "172.16.1.1"
+DNS_server_2 = "172.16.1.2"
+### end of Configuration parameters ###
+
+Vagrant.configure("2") do |config|
+	config.vm.define "namenode" do |namenode|
+		namenode.vm.box = "generic/debian9"
+		if ENTREPRISE_NETWORK_DNS_RULE == true
+			namenode.vm.provision "shell", inline: <<-SHELL
+				systemctl stop resolvconf
+				echo "nameserver 172.16.1.1" > /etc/resolv.conf
+				echo "nameserver 172.16.1.2" >> /etc/resolv.conf
+			SHELL
+		end
+		namenode.vm.hostname = "namenode"
+		namenode.vm.network :private_network, ip: "10.0.0.10"
+		namenode.vm.provision "ansible" do |ansible|
+			ansible.playbook = "../../playbook/install-namenode.yml"
+		end
+		if DEPLOY_Geonetwork == true
+			namenode.vm.provision "ansible" do |ansible|
+				ansible.playbook = "../../playbook/install-geonetwork-by-git.yml"
+			end
+		end
+	end
+
+	# Number of datanode
+	N = NUMBER_OF_DATANODE
+	(1..N).each do |machine_id|
+		config.vm.define "datanode#{machine_id}" do |machine|
+			machine.vm.box = "generic/debian9"
+			if ENTREPRISE_NETWORK_DNS_RULE == true
+				machine.vm.provision "shell", inline: <<-SHELL
+					systemctl stop resolvconf
+					echo "nameserver 172.16.1.1" > /etc/resolv.conf
+					echo "nameserver 172.16.1.2" >> /etc/resolv.conf
+				SHELL
+			end
+			machine.vm.hostname = "datanode#{machine_id}"
+			machine.vm.network :private_network, ip: "10.0.0.1#{machine_id}"
+			machine.vm.provision "ansible" do |ansible|
+				ansible.playbook = "../../playbook/install-datanode.yml"
+			end
+		end
+	end
+end

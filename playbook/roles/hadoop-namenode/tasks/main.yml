@@ -1,0 +1,7 @@
+- name: configure core-site.xml
+  become: yes
+  template:
+    src: templates/core-site.j2
+    dest: "{{ hadoopDir }}/etc/hadoop/core-site.xml"
+    owner: hadoop
+    group: hadoop

@@ -1,0 +1,170 @@
+# Playbook based on https://fr.blog.businessdecision.com/tutoriel-cluster-hadoop/
+
+- debug:
+    msg: 
+      - "Hadoop only support java jdk 8, see https://cwiki.apache.org/confluence/display/HADOOP/Hadoop+Java+Versions when it'll support jdk 11"
+      - "Be aware that things may not work when using jdk 11 like explore HDFS using webserver on port 9870"
+      - "Default IPv4 address is : {{ ansible_default_ipv4.address }}"
+
+- name: Set java home as environment variable
+  become: yes
+  apt:
+    name:
+      - openjdk-11-jdk
+
+- name: create hadoop group
+  become: yes
+  group:
+    name: hadoop
+
+- name: create hadoop user
+  become: yes
+  user:
+    name: hadoop
+    group: hadoop
+    home: "{{ hadoopUSRHome }}"
+    createhome: yes
+    system: yes
+
+- name: Set JAVA_HOME as environment variable
+  become: yes
+  become_user : hadoop
+  blockinfile:
+    insertafter: EOF
+    path : ~/.bashrc
+    block: |
+      export JAVA_HOME={{ javahome }}
+      export HADOOP_HOME=/usr/local/hadoop
+      export PATH=$PATH:$HADOOP_HOME/bin
+
+- name: source .bashrc
+  become: yes
+  become_user: hadoop
+  shell: source ~/.bashrc
+  args:
+     executable: /bin/bash
+
+
+- name: create .ssh directory
+  become: yes
+  file:
+    path: "{{ hadoopUSRHome }}/.ssh/"
+    state: directory
+    owner: hadoop
+    group: hadoop
+    mode: 0700
+
+- name: copy ssh key
+  become: yes
+  copy:
+    src: "{{ item }}"
+    dest: "{{ hadoopUSRHome }}/.ssh/"
+    owner: hadoop
+    group: hadoop
+    mode: 0600
+  with_items:
+    - keys/id_rsa
+    - keys/id_rsa.pub
+
+- name: authorized ssh key for hadoop user
+  become: yes
+  authorized_key:
+    user: hadoop
+    state: present
+    key: "{{ lookup('file', 'keys/id_rsa.pub') }}"
+    
+- name: create a tempory directory
+  become: yes
+  file:
+    state: directory
+    path: "{{ hadoopUSRHome }}/tmp"
+
+- name: create a prod directory for hadoop
+  become: yes
+  file:
+    state: directory
+    path: "{{ hadoopDir }}"
+
+- name: "Download and Extract hadoop-{{ hadoopVersion }}"
+  become: yes
+  unarchive: 
+    src: "http://apache.mirrors.ovh.net/ftp.apache.org/dist/hadoop/core/hadoop-{{ hadoopVersion }}/hadoop-{{ hadoopVersion }}.tar.gz"
+    remote_src: yes
+    dest: "{{ hadoopDir }}"
+    extra_opts: [--strip-components=1]
+    owner: hadoop
+    group: hadoop
+
+- name : Set JAVA_HOME in hadoop-env.sh
+  become: yes
+  blockinfile:
+    insertafter: EOF
+    path: "{{ hadoopDir }}/etc/hadoop/hadoop-env.sh"
+    block: "export JAVA_HOME={{ javahome }}"
+
+- name: configure core-site.xml
+  become: yes
+  template:
+    src: templates/core-site.j2
+    dest: "{{ hadoopDir }}/etc/hadoop/core-site.xml"
+    owner: hadoop
+    group: hadoop
+
+- name: configure hdfs-site.xml
+  become: yes
+  template:
+    src: templates/hdfs-site.j2
+    dest: "{{ hadoopDir }}/etc/hadoop/hdfs-site.xml"
+    owner: hadoop
+    group: hadoop
+
+- name: configure mapred-site.xml
+  become: yes
+  template:
+    src: templates/mapred-site.j2
+    dest: "{{ hadoopDir }}/etc/hadoop/mapred-site.xml"
+    owner: hadoop
+    group: hadoop
+
+- name: copy hadoop service file
+  become: yes
+  template:
+    src: templates/hadoop.service.j2
+    dest: /etc/systemd/system/hadoop.service
+
+- name: enable hadoop service
+  become: yes
+  service:
+    daemon_reload: yes
+    name: hadoop
+    state: stopped
+    enabled: yes
+
+- name: HDFS has been already formatted ?
+  become: yes
+  stat:
+    path: /tmp/hadoop-hadoop/dfs/name/current/VERSION
+  register: file_exist
+
+- debug:
+    msg: "/tmp/hadoop-hadoop/dfs/name/current/VERSION  exists ? : {{ file_exist.stat.exists}}"
+
+- name: format HDFS
+  become: yes
+  become_user: hadoop
+  shell: "{{ hadoopDir }}/bin/hdfs namenode -format"
+  args:
+    executable: /bin/bash
+  when: file_exist.stat.exists == False
+
+- name: stopped hadoop service
+  become: yes
+  service:
+    name: hadoop
+    state: stopped
+
+- name: start hadoop service
+  become: yes
+  service:
+    name: hadoop
+    state: started

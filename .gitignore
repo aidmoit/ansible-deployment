@@ -1,0 +1,10 @@
+### Ansible ### 
+*.retry
+
+### Vagrant ###
+vagrant/mononode/.vagrant/
+vagrant/cluster/.vagrant/
+vagrant/geonetwork/.vagrant/
+
+### Sublime Workspace ###
+hadoop-ansible-deployment.sublime-*

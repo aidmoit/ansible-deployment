@@ -1,0 +1,18 @@
+<configuration>
+	<property>
+		<name>dfs.name.dir</name>
+		<value>file:///home/hadoop/tmp</value>
+	</property>
+	<property>
+		<name>dfs.data.dir</name>
+		<value>file:///home/hadoop/tmp</value>
+	</property>
+	<property>
+		<name>dfs.replication</name>
+		<value>{{nbOfClusterDataNode}}</value>
+	</property>
+	<property>
+  		<name>dfs.permissions</name>
+  		<value>false</value>
+	</property>
+</configuration>

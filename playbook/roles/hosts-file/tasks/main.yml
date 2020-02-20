@@ -1,0 +1,5 @@
+- name: build /etc/hosts with variables definition
+  become: yes
+  template:
+    src: templates/etc_hosts.j2
+    dest: "/etc/hosts"

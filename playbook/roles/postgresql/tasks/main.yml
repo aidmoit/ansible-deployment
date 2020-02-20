@@ -1,0 +1,43 @@
+    - name: Install Postgres DB
+      become: yes
+      apt:
+        name:
+          - postgresql
+          - postgresql-contrib
+          - libpq-dev
+          - postgresql-client
+          - postgresql-client-common
+          - python-psycopg2
+
+    - name: Postgres listen on every interface
+      become: yes
+      lineinfile:
+        path: /etc/postgresql/9.6/main/postgresql.conf
+        insertafter: '# - Connection Settings -'
+        line: listen_addresses = '*'
+
+    - name: forcing UTF8 encoding
+      become: yes
+      lineinfile:
+        path: /etc/postgresql/9.6/main/postgresql.conf
+        regexp: '{{item.From}}'
+        line: '{{item.To}}'
+        state: present
+      with_items:
+         - { From: "lc_messages = 'en_US'                   # locale for system error message", To: "lc_messages = 'en_US.UTF-8'                   # locale for system error message"}
+         - { From: "lc_monetary = 'en_US'                   # locale for monetary formatting", To: "lc_monetary = 'en_US.UTF-8'                   # locale for monetary formatting"}
+         - { From: "lc_numeric = 'en_US'                    # locale for number formatting", To: "lc_numeric = 'en_US.UTF-8'                    # locale for number formatting"}
+         - { From: "lc_time = 'en_US'                               # locale for time formatting", To: "lc_time = 'en_US.UTF-8'                               # locale for time formatting"}
+
+    - name: Postgres firewall accept from our local network
+      become: yes
+      lineinfile:
+        path: /etc/postgresql/9.6/main/pg_hba.conf
+        insertafter: EOF
+        line: host all all 172.16.10.0/24 md5
+
+    - name: Restart postgres
+      become: yes
+      service:
+        name: postgresql
+        state: restarted

@@ -1,0 +1,64 @@
+    - name: Install dependencies for tomcat
+      become: yes
+      apt:
+        name:
+          - openjdk-8-jdk
+
+    - name: tomcat - add tomcat group
+      become: yes
+      group:
+        name: tomcat
+
+    - name: tomcat - add tomcat user
+      become: yes
+      user:
+        name: tomcat
+        group: tomcat
+        home: /usr/share/tomcat
+        createhome: no
+        system: yes
+
+    - name: tomcat - download tomcat
+      become: yes
+      get_url:
+        url: "{{ donwloadTomcatUrl }}"
+        dest: /root/ansible-dl/tomcat8.tar.gz
+
+    - name: tomcat - create a tomcat directory
+      become: yes
+      file:
+        path: /usr/share/tomcat
+        state: directory
+        owner: tomcat
+        group: tomcat
+
+    - name: tomcat - extract tomcat archive
+      become: yes
+      unarchive:
+        src: /root/ansible-dl/tomcat8.tar.gz
+        dest: /usr/share/tomcat
+        owner: tomcat
+        group: tomcat
+        remote_src: yes
+        extra_opts: "--strip-components=1"
+        creates: /usr/share/tomcat/bin
+
+    - name: tomcat - copy tomcat service file
+      become: yes
+      template:
+        src: templates/tomcat.service.j2
+        dest: /etc/systemd/system/tomcat.service
+
+    - name: tomcat - enable tomcat
+      become: yes
+      service:
+        daemon_reload: yes
+        name: tomcat
+        state: stopped
+        enabled: yes
+
+    - name: tomcat - start
+      become: yes
+      service:
+        name: tomcat
+        state: started

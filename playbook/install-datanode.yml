@@ -1,0 +1,10 @@
+---
+- name: deploy a datanode for a HDFS cluster
+  hosts: 'all'
+  
+  roles:
+    - common
+    - hosts-file
+    - role: hadoop-common
+      vars_files: 
+        - playbook/roles/hosts-file/vars/main.yml

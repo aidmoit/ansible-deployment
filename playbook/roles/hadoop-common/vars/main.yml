@@ -1,0 +1,6 @@
+hadoopVersion: 3.2.1
+hadoopUSRHome: /home/hadoop
+hadoopDir: /usr/local/hadoop/
+javahome: /usr/lib/jvm/java-8-openjdk-amd64
+openjdk8URL : http://security-cdn.debian.org/debian-security/pool/updates/main/o/openjdk-8/openjdk-8-jdk_8u232-b09-1~deb9u1_amd64.deb
+nbOfClusterDataNode: 2
